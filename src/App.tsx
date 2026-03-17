@@ -134,6 +134,7 @@ function AppContent() {
   const [activeWorkspace, setActiveWorkspace] = useState<Workspace | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [showTimeoutMessage, setShowTimeoutMessage] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
   
   // Modal States
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
@@ -354,6 +355,31 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-zinc-50 flex">
+      {/* Debug Toggle - Only visible in dev/preview */}
+      <button 
+        onClick={() => setShowDebug(!showDebug)}
+        className="fixed bottom-4 right-4 z-50 p-2 bg-slate-800 text-white rounded-full opacity-20 hover:opacity-100 transition-opacity"
+        title="Toggle Debug Info"
+      >
+        <Shield size={16} />
+      </button>
+
+      {showDebug && (
+        <div className="fixed bottom-16 right-4 z-50 p-4 bg-white border border-slate-200 rounded-lg shadow-xl max-w-sm text-xs font-mono overflow-auto max-h-[80vh]">
+          <h3 className="font-bold mb-2 border-bottom pb-1">Debug Info</h3>
+          <p><strong>Project ID:</strong> {db.app.options.projectId}</p>
+          <p><strong>Auth Domain:</strong> {db.app.options.authDomain}</p>
+          <p><strong>User ID:</strong> {user?.uid || 'Not logged in'}</p>
+          <p><strong>Email:</strong> {user?.email || 'N/A'}</p>
+          <p><strong>Profile Role:</strong> {profile?.role || 'N/A'}</p>
+          <p><strong>Connection Error:</strong> {connectionError || 'None'}</p>
+          <div className="mt-2 pt-2 border-t">
+            <p className="font-bold">Workspaces: {workspaces.length}</p>
+            <p className="font-bold">Notifications: {notifications.length}</p>
+          </div>
+        </div>
+      )}
+
       {/* Sidebar */}
       <aside className="w-64 bg-white border-r border-zinc-200 flex flex-col">
         <div className="p-6 flex items-center gap-3">

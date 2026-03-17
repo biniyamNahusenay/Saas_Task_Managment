@@ -1,6 +1,9 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+
+// Import the config file. Note: This file is in .gitignore to prevent accidental exposure.
+// If you are running this locally and the file is missing, you can use environment variables instead.
 import firebaseConfigJson from '../firebase-applet-config.json';
 
 const isCustomProject = !!import.meta.env.VITE_FIREBASE_PROJECT_ID && import.meta.env.VITE_FIREBASE_PROJECT_ID !== '';
