@@ -257,7 +257,6 @@ function AppContent() {
     const q = query(
       collection(db, 'notifications'),
       where('userId', '==', user.uid),
-      orderBy('createdAt', 'desc'),
       limit(20)
     );
 

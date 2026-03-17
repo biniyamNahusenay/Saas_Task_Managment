@@ -21,8 +21,11 @@ const firebaseConfig = {
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || firebaseConfigJson.messagingSenderId,
   appId: import.meta.env.VITE_FIREBASE_APP_ID || firebaseConfigJson.appId,
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || firebaseConfigJson.measurementId,
-  // Only use the fallback database ID if we are NOT using a custom project
-  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_FIRESTORE_DATABASE_ID || (isCustomProject ? undefined : (firebaseConfigJson as any).firestoreDatabaseId)
+  // Use the database ID from environment or fallback to JSON if the project IDs match
+  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_FIRESTORE_DATABASE_ID || 
+    (isCustomProject && import.meta.env.VITE_FIREBASE_PROJECT_ID !== firebaseConfigJson.projectId 
+      ? undefined 
+      : (firebaseConfigJson as any).firestoreDatabaseId)
 };
 
 if (import.meta.env.DEV || window.location.hostname.includes('run.app')) {
