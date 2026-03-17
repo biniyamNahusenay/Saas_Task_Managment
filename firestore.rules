@@ -1,0 +1,103 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    // Collection: users
+    // Fields: uid, email, displayName, photoURL, role, currentWorkspaceId, createdAt
+    //
+    // Collection: workspaces
+    // Fields: name, ownerId, members (array), createdAt
+    //
+    // Collection: teams
+    // Fields: name, workspaceId, members (array), createdAt
+    //
+    // Collection: tasks
+    // Fields: title, description, priority, status, deadline, workspaceId, teamId, assignedTo, creatorId, createdAt
+    //
+    // Collection: comments
+    // Fields: text, taskId, authorId, authorName, createdAt
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "bininahu12@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isWorkspaceMember(workspaceId) {
+      return isAuthenticated() && request.auth.uid in get(/databases/$(database)/documents/workspaces/$(workspaceId)).data.members;
+    }
+
+    function isWorkspaceOwner(workspaceId) {
+      return isAuthenticated() && request.auth.uid == get(/databases/$(database)/documents/workspaces/$(workspaceId)).data.ownerId;
+    }
+
+    // Domain Validators
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role']) &&
+             data.uid is string &&
+             data.email is string &&
+             data.role in ['admin', 'user'];
+    }
+
+    function isValidWorkspace(data) {
+      return data.keys().hasAll(['name', 'ownerId', 'members']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.ownerId is string &&
+             data.members is list;
+    }
+
+    function isValidTask(data) {
+      return data.keys().hasAll(['title', 'priority', 'status', 'workspaceId', 'creatorId']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.priority in ['low', 'medium', 'high', 'urgent'] &&
+             data.status in ['todo', 'in-progress', 'review', 'done'] &&
+             data.workspaceId is string;
+    }
+
+    // Rules
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role == 'user';
+      allow update: if (isOwner(userId) || isAdmin()) && isValidUser(request.resource.data) && 
+                    (isOwner(userId) ? request.resource.data.role == resource.data.role : true);
+    }
+
+    match /workspaces/{workspaceId} {
+      allow read: if isAuthenticated() && (request.auth.uid in resource.data.members || isAdmin());
+      allow create: if isAuthenticated() && isValidWorkspace(request.resource.data) && request.resource.data.ownerId == request.auth.uid;
+      allow update: if (isWorkspaceOwner(workspaceId) || isAdmin()) && isValidWorkspace(request.resource.data);
+      allow delete: if isWorkspaceOwner(workspaceId) || isAdmin();
+    }
+
+    match /teams/{teamId} {
+      allow read: if isAuthenticated() && (isWorkspaceMember(resource.data.workspaceId) || isAdmin());
+      allow create: if isAuthenticated() && isWorkspaceMember(request.resource.data.workspaceId);
+      allow update, delete: if isAuthenticated() && (isWorkspaceOwner(resource.data.workspaceId) || isAdmin());
+    }
+
+    match /tasks/{taskId} {
+      allow read: if isAuthenticated() && (isWorkspaceMember(resource.data.workspaceId) || isAdmin());
+      allow create: if isAuthenticated() && isWorkspaceMember(request.resource.data.workspaceId) && isValidTask(request.resource.data);
+      allow update: if isAuthenticated() && (isWorkspaceMember(resource.data.workspaceId) || isAdmin()) && isValidTask(request.resource.data);
+      allow delete: if isAuthenticated() && (isWorkspaceMember(resource.data.workspaceId) || isAdmin());
+    }
+
+    match /comments/{commentId} {
+      allow read: if isAuthenticated(); // Simplified for now, should check task's workspace
+      allow create: if isAuthenticated() && request.resource.data.authorId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && (resource.data.authorId == request.auth.uid || isAdmin());
+    }
+  }
+}

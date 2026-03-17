@@ -1,0 +1,81 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and system settings",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique identifier for the user" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "user"], "description": "System-wide role" },
+        "currentWorkspaceId": { "type": "string", "description": "The workspace the user is currently viewing" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Workspace": {
+      "title": "Workspace",
+      "description": "A top-level container for teams and tasks",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "members": { "type": "array", "items": { "type": "string" }, "description": "Array of user UIDs" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "ownerId", "members"]
+    },
+    "Team": {
+      "title": "Team",
+      "description": "A group within a workspace",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "workspaceId": { "type": "string" },
+        "members": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "workspaceId", "members"]
+    },
+    "Task": {
+      "title": "Task",
+      "description": "A unit of work",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "priority": { "type": "string", "enum": ["low", "medium", "high", "urgent"] },
+        "status": { "type": "string", "enum": ["todo", "in-progress", "review", "done"] },
+        "deadline": { "type": "string", "format": "date-time" },
+        "workspaceId": { "type": "string" },
+        "teamId": { "type": "string" },
+        "assignedTo": { "type": "string", "description": "UID of assigned user" },
+        "creatorId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "priority", "status", "workspaceId", "creatorId"]
+    },
+    "Comment": {
+      "title": "Comment",
+      "description": "A message on a task",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string" },
+        "taskId": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["text", "taskId", "authorId", "createdAt"]
+    }
+  },
+  "firestore": {
+    "users/{uid}": { "schema": "User", "description": "User profiles" },
+    "workspaces/{workspaceId}": { "schema": "Workspace", "description": "Workspaces" },
+    "teams/{teamId}": { "schema": "Team", "description": "Teams within workspaces" },
+    "tasks/{taskId}": { "schema": "Task", "description": "Tasks" },
+    "comments/{commentId}": { "schema": "Comment", "description": "Task comments" }
+  }
+}
