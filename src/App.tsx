@@ -145,10 +145,14 @@ function AppContent() {
     const testConnection = async () => {
       try {
         await getDocFromServer(doc(db, '_connection_test', 'test'));
+        setConnectionError(null);
       } catch (error: any) {
+        console.error("Connection test error:", error.message);
         if (error.message?.includes('the client is offline')) {
-          console.error("Firebase connection test failed: client is offline");
-          setConnectionError("The app is having trouble connecting to the database. This often happens if third-party cookies are blocked or if you're behind a strict firewall.");
+          setConnectionError("The app cannot reach the database. Please check your internet connection and ensure Firestore is enabled in your Firebase Console.");
+        } else if (error.code === 'permission-denied') {
+          // This is actually a GOOD sign - it means we connected but were blocked by rules
+          setConnectionError(null);
         }
       }
     };
@@ -218,6 +222,16 @@ function AppContent() {
       }
     }, (err) => {
       console.error("Workspace listener error:", err);
+      const errInfo = {
+        error: err.message,
+        operationType: 'get',
+        path: 'workspaces',
+        authInfo: {
+          userId: user?.uid,
+          email: user?.email,
+        }
+      };
+      console.error('Firestore Error Info:', JSON.stringify(errInfo));
     });
 
     return () => unsubscribe();
@@ -237,6 +251,18 @@ function AppContent() {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const n = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
       setNotifications(n);
+    }, (err) => {
+      console.error("Notification listener error:", err);
+      const errInfo = {
+        error: err.message,
+        operationType: 'get',
+        path: 'notifications',
+        authInfo: {
+          userId: user?.uid,
+          email: user?.email,
+        }
+      };
+      console.error('Firestore Error Info:', JSON.stringify(errInfo));
     });
 
     return () => unsubscribe();
@@ -293,9 +319,17 @@ function AppContent() {
         )}
 
         {connectionError && (
-          <div className="mt-8 p-4 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600 max-w-md flex items-start gap-3 text-left">
-            <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-            <p>{connectionError}</p>
+          <div className="mt-8 p-4 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600 max-w-md flex flex-col items-start gap-3 text-left">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <p>{connectionError}</p>
+            </div>
+            <button 
+              onClick={() => window.location.reload()}
+              className="text-xs font-bold uppercase tracking-wider text-red-700 hover:text-red-800 underline underline-offset-4"
+            >
+              Retry Connection
+            </button>
           </div>
         )}
       </div>

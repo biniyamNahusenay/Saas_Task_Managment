@@ -40,7 +40,7 @@ service cloud.firestore {
     }
 
     function isWorkspaceOwner(workspaceId) {
-      return isAuthenticated() && request.auth.uid == get(/databases/$(database)/documents/workspaces/$(workspaceId)).data.ownerId;
+      return isAuthenticated() && get(/databases/$(database)/documents/workspaces/$(workspaceId)).data.ownerId == request.auth.uid;
     }
 
     // Domain Validators
@@ -64,6 +64,15 @@ service cloud.firestore {
              data.priority in ['low', 'medium', 'high', 'urgent'] &&
              data.status in ['todo', 'in-progress', 'review', 'done'] &&
              data.workspaceId is string;
+    }
+
+    function isValidNotification(data) {
+      return data.keys().hasAll(['userId', 'title', 'message', 'type', 'read', 'createdAt']) &&
+             data.userId is string &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.message is string && data.message.size() > 0 && data.message.size() < 1000 &&
+             data.type in ['assignment', 'comment', 'status'] &&
+             data.read is bool;
     }
 
     // Rules
@@ -98,6 +107,13 @@ service cloud.firestore {
       allow read: if isAuthenticated(); // Simplified for now, should check task's workspace
       allow create: if isAuthenticated() && request.resource.data.authorId == request.auth.uid;
       allow update, delete: if isAuthenticated() && (resource.data.authorId == request.auth.uid || isAdmin());
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      allow create: if isAuthenticated(); // Allow system/users to create notifications
+      allow update: if isOwner(resource.data.userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow delete: if isOwner(resource.data.userId) || isAdmin();
     }
   }
 }

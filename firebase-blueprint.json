@@ -69,6 +69,21 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["text", "taskId", "authorId", "createdAt"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "System notification for a user",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string", "enum": ["assignment", "comment", "status"] },
+        "read": { "type": "boolean" },
+        "link": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "message", "type", "read", "createdAt"]
     }
   },
   "firestore": {
@@ -76,6 +91,7 @@
     "workspaces/{workspaceId}": { "schema": "Workspace", "description": "Workspaces" },
     "teams/{teamId}": { "schema": "Team", "description": "Teams within workspaces" },
     "tasks/{taskId}": { "schema": "Task", "description": "Tasks" },
-    "comments/{commentId}": { "schema": "Comment", "description": "Task comments" }
+    "comments/{commentId}": { "schema": "Comment", "description": "Task comments" },
+    "notifications/{notificationId}": { "schema": "Notification", "description": "User notifications" }
   }
 }

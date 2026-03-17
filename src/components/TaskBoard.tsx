@@ -68,6 +68,17 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({ workspaceId, userId, userN
       const t = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
       setTasks(t);
       setLoading(false);
+    }, (err) => {
+      console.error("Task listener error:", err);
+      const errInfo = {
+        error: err.message,
+        operationType: 'get',
+        path: 'tasks',
+        authInfo: {
+          userId: userId,
+        }
+      };
+      console.error('Firestore Error Info:', JSON.stringify(errInfo));
     });
 
     return () => unsubscribe();
