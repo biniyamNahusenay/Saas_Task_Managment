@@ -10,9 +10,10 @@ import { motion } from 'motion/react';
 interface SettingsProps {
   user: FirebaseUser;
   profile: UserProfile | null;
+  className?: string;
 }
 
-export const Settings: React.FC<SettingsProps> = ({ user, profile }) => {
+export const Settings: React.FC<SettingsProps> = ({ user, profile, className }) => {
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<'profile' | 'notifications' | 'security' | 'appearance'>('profile');
   const [displayName, setDisplayName] = useState(profile?.displayName || '');
@@ -178,7 +179,7 @@ export const Settings: React.FC<SettingsProps> = ({ user, profile }) => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className={`max-w-4xl mx-auto space-y-8 ${className || ''}`}>
       <div>
         <h2 className="text-2xl font-bold text-zinc-900">Settings</h2>
         <p className="text-zinc-500">Manage your account settings and preferences.</p>

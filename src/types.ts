@@ -39,6 +39,7 @@ export interface Task {
   teamId?: string;
   assignedTo?: string;
   creatorId: string;
+  commentsCount?: number;
   createdAt: string;
 }
 

@@ -32,7 +32,8 @@ import {
   LogOut,
   Plus,
   Check,
-  Clock
+  Clock,
+  Shield
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { updateDoc, deleteDoc } from 'firebase/firestore';
@@ -43,6 +44,7 @@ import { Settings } from './components/Settings';
 import { Admin } from './components/Admin';
 import { CreateTaskModal, CreateWorkspaceModal } from './components/Modals';
 import { ToastProvider, useToast } from './context/ToastContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Components
 const Login = () => {
@@ -116,9 +118,11 @@ const Login = () => {
 
 export default function App() {
   return (
-    <ToastProvider>
-      <AppContent />
-    </ToastProvider>
+    <ErrorBoundary>
+      <ToastProvider>
+        <AppContent />
+      </ToastProvider>
+    </ErrorBoundary>
   );
 }
 
@@ -137,6 +141,8 @@ function AppContent() {
   const [isWorkspaceDropdownOpen, setIsWorkspaceDropdownOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+
+  const { showToast } = useToast();
 
   useEffect(() => {
     console.log("Setting up auth listener...");
@@ -170,12 +176,14 @@ function AppContent() {
       setUser(firebaseUser);
       
       if (firebaseUser) {
+        console.log("User is authenticated, syncing profile...");
         try {
           // Sync profile
           const userRef = doc(db, 'users', firebaseUser.uid);
           const userSnap = await getDoc(userRef);
           
           if (!userSnap.exists()) {
+            console.log("Profile does not exist, creating new profile...");
             const isAdmin = firebaseUser.email === 'bininahu12@gmail.com';
             const newProfile: UserProfile = {
               uid: firebaseUser.uid,
@@ -186,12 +194,16 @@ function AppContent() {
               createdAt: new Date().toISOString(),
             };
             await setDoc(userRef, newProfile);
+            console.log("Profile created successfully:", newProfile);
             setProfile(newProfile);
           } else {
-            setProfile(userSnap.data() as UserProfile);
+            const existingProfile = userSnap.data() as UserProfile;
+            console.log("Profile found:", existingProfile);
+            setProfile(existingProfile);
           }
-        } catch (err) {
+        } catch (err: any) {
           console.error("Error syncing profile:", err);
+          showToast(`Error syncing profile: ${err.message}`, 'error');
         }
       } else {
         setProfile(null);
@@ -205,7 +217,7 @@ function AppContent() {
       unsubscribe();
       clearTimeout(timer);
     };
-  }, []);
+  }, [showToast]);
 
   // Workspace Listener
   useEffect(() => {
@@ -433,7 +445,7 @@ function AppContent() {
               onClick={() => setCurrentView('admin')}
               className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${currentView === 'admin' ? 'text-purple-600 bg-purple-50 font-medium' : 'text-zinc-600 hover:bg-zinc-50'}`}
             >
-              <Settings className="w-5 h-5 text-purple-500" />
+              <Shield className="w-5 h-5 text-purple-500" />
               Admin Panel
             </button>
           )}

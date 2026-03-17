@@ -2,7 +2,64 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, CheckSquare, Layout, Users, Plus, AlertTriangle, Calendar, MessageSquare, Send, Trash2 } from 'lucide-react';
 import { addDoc, collection, serverTimestamp, updateDoc, doc, query, where, getDocs, arrayUnion, onSnapshot, orderBy, deleteDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
+
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId: string | undefined;
+    email: string | null | undefined;
+    emailVerified: boolean | undefined;
+    isAnonymous: boolean | undefined;
+    tenantId: string | null | undefined;
+    providerInfo: {
+      providerId: string;
+      displayName: string | null;
+      email: string | null;
+      photoUrl: string | null;
+    }[];
+  }
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData.map(provider => ({
+        providerId: provider.providerId,
+        displayName: provider.displayName,
+        email: provider.email,
+        photoUrl: provider.photoURL
+      })) || []
+    },
+    operationType,
+    path
+  }
+  console.error('Firestore Error Details:', errInfo);
+  
+  // If it's a permission error, make it very obvious
+  if (errInfo.error.includes('permission-denied') || errInfo.error.includes('insufficient permissions')) {
+    throw new Error(`Permission Denied: You don't have access to ${operationType} on ${path}. Check your security rules.`);
+  }
+  
+  throw new Error(errInfo.error);
+}
 import { Task, TaskPriority, TaskStatus, UserProfile } from '../types';
 import { useToast } from '../context/ToastContext';
 
@@ -65,8 +122,12 @@ export const CreateTaskModal: React.FC<{
   useEffect(() => {
     if (isOpen) {
       const fetchUsers = async () => {
-        const snap = await getDocs(collection(db, 'users'));
-        setUsers(snap.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile)));
+        try {
+          const snap = await getDocs(collection(db, 'users'));
+          setUsers(snap.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile)));
+        } catch (error) {
+          handleFirestoreError(error, OperationType.GET, 'users');
+        }
       };
       fetchUsers();
     }
@@ -110,7 +171,11 @@ export const CreateTaskModal: React.FC<{
       onClose();
     } catch (error) {
       console.error("Failed to create task", error);
-      showToast('Failed to create task', 'error');
+      try {
+        handleFirestoreError(error, OperationType.CREATE, 'tasks');
+      } catch (e: any) {
+        showToast(`Failed to create task: ${e.message}`, 'error');
+      }
     } finally {
       setLoading(false);
     }
@@ -215,8 +280,12 @@ export const EditTaskModal: React.FC<{
   useEffect(() => {
     if (isOpen) {
       const fetchUsers = async () => {
-        const snap = await getDocs(collection(db, 'users'));
-        setUsers(snap.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile)));
+        try {
+          const snap = await getDocs(collection(db, 'users'));
+          setUsers(snap.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile)));
+        } catch (error) {
+          handleFirestoreError(error, OperationType.GET, 'users');
+        }
       };
       fetchUsers();
     }
@@ -585,9 +654,16 @@ export const CreateWorkspaceModal: React.FC<{
       showToast('Workspace created successfully!');
       setName('');
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to create workspace", error);
-      showToast('Failed to create workspace', 'error');
+      const errorMessage = error.message || "Unknown error";
+      showToast(`Failed to create workspace: ${errorMessage}`, 'error');
+      
+      try {
+        handleFirestoreError(error, OperationType.CREATE, 'workspaces');
+      } catch (e) {
+        // Error already handled by showToast above
+      }
     } finally {
       setLoading(false);
     }

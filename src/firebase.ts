@@ -19,7 +19,7 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID || firebaseConfigJson.appId,
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || firebaseConfigJson.measurementId,
   // Only use the fallback database ID if we are NOT using a custom project
-  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_FIRESTORE_DATABASE_ID || (isCustomProject ? undefined : firebaseConfigJson.firestoreDatabaseId)
+  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_FIRESTORE_DATABASE_ID || (isCustomProject ? undefined : (firebaseConfigJson as any).firestoreDatabaseId)
 };
 
 if (import.meta.env.DEV || window.location.hostname.includes('run.app')) {
@@ -36,3 +36,24 @@ export const db = firebaseConfig.firestoreDatabaseId
   ? getFirestore(app, firebaseConfig.firestoreDatabaseId)
   : getFirestore(app);
 export const googleProvider = new GoogleAuthProvider();
+
+// Test Firestore connection
+import { doc, getDocFromServer } from 'firebase/firestore';
+
+async function testFirestoreConnection() {
+  try {
+    console.log("Testing Firestore connection to database:", firebaseConfig.firestoreDatabaseId || '(default)');
+    // Try to get a non-existent document just to check connectivity
+    await getDocFromServer(doc(db, '_connection_test_', 'test'));
+    console.log("Firestore connection test successful (reached server).");
+  } catch (error: any) {
+    console.error("Firestore connection test failed:", error.message);
+    if (error.message.includes('client is offline')) {
+      console.error("CRITICAL: Firestore client is offline. This usually means the project ID or database ID is incorrect, or Firestore is not enabled.");
+    }
+  }
+}
+
+if (typeof window !== 'undefined') {
+  testFirestoreConnection();
+}
