@@ -311,6 +311,16 @@ function AppContent() {
             <p className="text-zinc-500 mb-6 text-sm">
               This is taking longer than expected. This usually happens if the preview environment is restricted by your browser's security settings.
             </p>
+            
+            <div className="mb-6 p-4 bg-zinc-100 rounded-xl text-left font-mono text-[10px] text-zinc-600 overflow-auto max-h-40 border border-zinc-200">
+              <p className="font-bold border-b border-zinc-200 mb-1 pb-1">Debug Info:</p>
+              <p>Status: {connectionError || "Connecting..."}</p>
+              <p>Auth: {user ? `Logged In (${user.email})` : "Not Logged In"}</p>
+              <p>Profile: {profile ? "Synced" : "Not Synced"}</p>
+              <p>Workspaces: {workspaces.length}</p>
+              <p>Path: {window.location.pathname}</p>
+            </div>
+
             <div className="flex flex-col gap-3">
               <button 
                 onClick={() => window.location.reload()}

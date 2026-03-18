@@ -1,13 +1,17 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // BROAD PERMISSIVE RULES FOR DEBUGGING
+    // Allows any authenticated user to read and write to any document.
     match /{document=**} {
-      // Allow all authenticated users to read and write for now
-      // We will tighten this once we confirm the connection is stable
       allow read, write: if request.auth != null;
     }
     
+    // Allow public read for connection test
     match /_connection_test/{docId} {
+      allow read: if true;
+    }
+    match /_connection_test_/{docId} {
       allow read: if true;
     }
   }
